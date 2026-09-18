@@ -1,8 +1,9 @@
+import os
 import streamlit as st
 import requests
 import plotly.graph_objects as go
 
-API_BASE = "https://your-app.up.railway.app"
+API_BASE = os.environ.get("API_BASE", "http://127.0.0.1:8080")
 
 st.set_page_config(page_title="AI QBank", layout="wide", page_icon="📚")
 
@@ -425,27 +426,6 @@ elif page == "Question Generation":
             st.success(f"Generated {result.get('total_generated', 0)} candidates → {result.get('final_top_n', 0)} ranked questions.")
         else:
             st.error(f"Generation failed: {resp.text}")
-
-
-        for b in batches:
-            col1, col2, col3 = st.columns([3, 2, 2])
-            with col1:
-                st.write(f"🗂️ Batch: `{b['batch_id']}`")
-            with col2:
-                st.write(f"**{b['question_count']}** questions")
-            with col3:
-                pdf_resp = requests.get(
-                    f"{API_BASE}/subjects/{subject_id}/batches/{b['batch_id']}/pdf",
-                    headers=auth_headers(),
-                )
-                if pdf_resp.status_code == 200:
-                    st.download_button(
-                        label="📄 Download PDF",
-                        data=pdf_resp.content,
-                        file_name=f"{subject_names.get(subject_id, 'subject')}_{b['batch_id']}.pdf",
-                        mime="application/pdf",
-                        key=f"pdf_{b['batch_id']}",
-                    )
 
 # ==================================================================
 # PAGE: Ask Question
