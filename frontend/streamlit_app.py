@@ -3,7 +3,7 @@ import streamlit as st
 import requests
 import plotly.graph_objects as go
 
-API_BASE = os.environ.get("API_BASE", "http://127.0.0.1:8080")
+API_BASE = "https://ai-qus-backend-production-xxxx.up.railway.app"
 
 st.set_page_config(page_title="AI QBank", layout="wide", page_icon="📚")
 
