@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import api from "../api/client";
-import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import type { OutletContext } from "../components/Layout";
 import type { GeneratedQuestion, TopicPattern, Document } from "../types";
 import { FileText, Layers, HelpCircle, Gauge, Download, RefreshCw } from "lucide-react";
