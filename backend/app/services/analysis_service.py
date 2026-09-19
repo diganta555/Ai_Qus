@@ -18,6 +18,9 @@ from app.engine.question_generator import QuestionGenerator
 from app.engine.question_validator import QuestionValidator
 from app.engine.question_ranker import QuestionRanker
 from app.engine.qa_engine import QAEngine
+import uuid
+from datetime import datetime
+from app.engine.answer_generator import AnswerGenerator
 
 
 import json
@@ -42,6 +45,7 @@ class AnalysisService:
         self.question_validator = QuestionValidator()
         self.question_ranker = QuestionRanker()
         self.qa_engine = QAEngine()
+        self.answer_generator = AnswerGenerator()
 
     def analyze_syllabus(self, subject_id: int) -> dict:
         document = (
@@ -477,10 +481,13 @@ class AnalysisService:
 
         top_blueprints = blueprints[:num_topics]
 
-        # Clear previous generated questions for this subject (allow re-generation)
-        self.db.query(GeneratedQuestion).filter(GeneratedQuestion.subject_id == subject_id).delete()
-        self.db.commit()
-
+        batch_number = (
+            self.db.query(GeneratedQuestion.batch_id)
+            .filter(GeneratedQuestion.subject_id == subject_id)
+            .distinct()
+            .count()
+        ) + 1
+        batch_id = f"batch_{batch_number}"
         all_candidates = []
 
         for blueprint in top_blueprints:
@@ -542,12 +549,26 @@ class AnalysisService:
         for i, c in enumerate(valid_candidates):
             if i < final_top_n:
                 c["status"] = "ranked"
+                
+        # # Generate answers only for the final ranked questions (not all candidates)
+        # for c in valid_candidates:
+        #     if c["status"] != "ranked":
+        #         continue
+        #     try:
+        #         rag_result = self.rag_engine.retrieve_for_topic(subject_id, c["topic_name"], top_k=4)
+        #         context_texts = [r["text"] for r in rag_result["academic_context"]]
+        #         answer = self.answer_generator.generate(c["question_text"], c.get("marks"), context_texts)
+        #         c["answer_text"] = answer.answer_text
+        #     except Exception:
+        #         c["answer_text"] = None
 
         # 5. Persist everything (candidates, rejected, and ranked) for transparency
         for c in all_candidates:
             record = GeneratedQuestion(
                 subject_id=subject_id,
+                batch_id=batch_id,
                 question_text=c["question_text"],
+                answer_text=c.get("answer_text"),
                 topic_id=c["topic_id"],
                 topic_name=c["topic_name"],
                 marks=c.get("marks"),
@@ -565,6 +586,7 @@ class AnalysisService:
         self.db.commit()
 
         return {
+            "batch_id": batch_id,
             "total_generated": len(all_candidates),
             "valid": len(valid_candidates),
             "rejected": len(all_candidates) - len(valid_candidates),

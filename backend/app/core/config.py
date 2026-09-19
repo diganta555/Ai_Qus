@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     anthropic_api_key: str | None = None
     groq_api_key: str | None = None
+    hf_token: str | None = None
     upload_dir: str = "./storage/uploads"
     jwt_secret_key: str = "change-this-to-a-real-random-secret-in-production"
     jwt_expire_minutes: int = 60 * 24 * 7

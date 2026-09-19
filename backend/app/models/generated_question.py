@@ -8,14 +8,16 @@ class GeneratedQuestion(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
+    batch_id = Column(String, nullable=False, index=True)
     question_text = Column(String, nullable=False)
+    answer_text = Column(String, nullable=True)
     topic_id = Column(Integer, nullable=True)
     topic_name = Column(String, nullable=True)
     marks = Column(Integer, nullable=True)
     difficulty = Column(String, nullable=True)
     question_type = Column(String, nullable=True)
     evidence_score = Column(Float, nullable=True)
-    evidence_breakdown = Column(String, nullable=True)   # JSON string — new
+    evidence_breakdown = Column(String, nullable=True)
     generation_reason = Column(String, nullable=True)
     supporting_years = Column(String, nullable=True)
     status = Column(String, nullable=False, default="candidate")

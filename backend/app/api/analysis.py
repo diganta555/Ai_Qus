@@ -266,9 +266,17 @@ def generate_questions(subject_id: int, num_topics: int = 8, questions_per_topic
 
 @router.get("/{subject_id}/final-questions")
 def get_final_questions(subject_id: int, db: Session = Depends(get_db)):
+    latest = (
+        db.query(GeneratedQuestion.batch_id)
+        .filter(GeneratedQuestion.subject_id == subject_id)
+        .order_by(GeneratedQuestion.created_at.desc())
+        .first()
+    )
+    if not latest:
+        return []
     questions = (
         db.query(GeneratedQuestion)
-        .filter(GeneratedQuestion.subject_id == subject_id, GeneratedQuestion.status == "ranked")
+        .filter(GeneratedQuestion.subject_id == subject_id, GeneratedQuestion.batch_id == latest[0], GeneratedQuestion.status == "ranked")
         .order_by(GeneratedQuestion.evidence_score.desc())
         .all()
     )
@@ -276,6 +284,7 @@ def get_final_questions(subject_id: int, db: Session = Depends(get_db)):
         {
             "id": q.id,
             "question_text": q.question_text,
+            "answer_text": q.answer_text,
             "topic_name": q.topic_name,
             "marks": q.marks,
             "difficulty": q.difficulty,
@@ -324,6 +333,7 @@ def download_final_questions_pdf(subject_id: int, db: Session = Depends(get_db))
     question_dicts = [
         {
             "question_text": q.question_text,
+            "answer_text": q.answer_text,
             "topic_name": q.topic_name,
             "marks": q.marks,
             "question_type": q.question_type,
@@ -333,9 +343,12 @@ def download_final_questions_pdf(subject_id: int, db: Session = Depends(get_db))
         for q in questions
     ]
 
+    print(f"DEBUG: building PDF with {len(question_dicts)} questions")
     try:
         pdf_bytes = build_questions_pdf(subject.name, question_dicts)
+        print(f"DEBUG: pdf_bytes length = {len(pdf_bytes) if pdf_bytes else 'None'}")
     except Exception as e:
+        print(f"DEBUG: PDF generation exception: {e}")
         raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
 
     return Response(
@@ -352,3 +365,76 @@ def ask_question(subject_id: int, payload: AskQuestionRequest, db: Session = Dep
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return result
+
+@router.get("/{subject_id}/batches")
+def list_batches(subject_id: int, db: Session = Depends(get_db)):
+    rows = (
+        db.query(GeneratedQuestion.batch_id, GeneratedQuestion.created_at)
+        .filter(GeneratedQuestion.subject_id == subject_id)
+        .distinct()
+        .all()
+    )
+    seen = {}
+    for batch_id, created_at in rows:
+        if batch_id not in seen:
+            seen[batch_id] = created_at
+
+    result = []
+    for batch_id, created_at in seen.items():
+        count = (
+            db.query(GeneratedQuestion)
+            .filter(GeneratedQuestion.subject_id == subject_id, GeneratedQuestion.batch_id == batch_id, GeneratedQuestion.status == "ranked")
+            .count()
+        )
+        result.append({"batch_id": batch_id, "created_at": created_at, "question_count": count})
+
+    result.sort(key=lambda x: x["batch_id"])
+    return result
+
+
+@router.get("/{subject_id}/batches/{batch_id}/questions")
+def get_batch_questions(subject_id: int, batch_id: str, db: Session = Depends(get_db)):
+    questions = (
+        db.query(GeneratedQuestion)
+        .filter(GeneratedQuestion.subject_id == subject_id, GeneratedQuestion.batch_id == batch_id, GeneratedQuestion.status == "ranked")
+        .order_by(GeneratedQuestion.evidence_score.desc())
+        .all()
+    )
+    return [
+        {
+            "id": q.id,
+            "question_text": q.question_text,
+            "topic_name": q.topic_name,
+            "marks": q.marks,
+            "difficulty": q.difficulty,
+            "question_type": q.question_type,
+            "evidence_score": q.evidence_score,
+            "generation_reason": q.generation_reason,
+            "supporting_years": json.loads(q.supporting_years) if q.supporting_years else [],
+        }
+        for q in questions
+    ]
+    
+@router.get("/{subject_id}/pipeline-status")
+def pipeline_status(subject_id: int, db: Session = Depends(get_db)):
+    from app.models.syllabus import SyllabusUnit
+    from app.models.concept import Concept
+
+    has_syllabus = db.query(SyllabusUnit).filter(SyllabusUnit.subject_id == subject_id).first() is not None
+    has_pyqs = db.query(ExtractedQuestion).filter(ExtractedQuestion.subject_id == subject_id).first() is not None
+    has_topics = db.query(ExtractedQuestion).filter(ExtractedQuestion.subject_id == subject_id, ExtractedQuestion.topic_id.isnot(None)).first() is not None
+    has_concepts = db.query(Concept).filter(Concept.subject_id == subject_id).first() is not None
+    has_patterns = db.query(TopicPatternRecord).filter(TopicPatternRecord.subject_id == subject_id).first() is not None
+
+    import os
+    kb_exists = os.path.exists(f"./storage/vectorstore/subject_{subject_id}/index.faiss")
+
+    return {
+        "analyze_syllabus": has_syllabus,
+        "extract_pyqs": has_pyqs,
+        "classify_topics": has_topics,
+        "map_concepts": has_concepts,
+        "analyze_repetition": has_topics,  # repetition tags live on ExtractedQuestion too
+        "analyze_patterns": has_patterns,
+        "build_knowledge_base": kb_exists,
+    }

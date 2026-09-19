@@ -102,3 +102,6 @@ class AskQuestionRequest(BaseModel):
 class AskQuestionResponse(BaseModel):
     answer: str
     sources: list[str] = []
+    
+class AnswerResult(BaseModel):
+    answer_text: str

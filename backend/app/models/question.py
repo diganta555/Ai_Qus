@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.sql import func
 from app.database.connection import Base
 
@@ -18,6 +18,6 @@ class ExtractedQuestion(Base):
     topic_id = Column(Integer, nullable=True)
     subtopic_id = Column(Integer, nullable=True)
     concept_id = Column(Integer, nullable=True)
-    repetition_type = Column(String, nullable=True)     # "exact" | "near" | "concept" | None
-    repetition_group_id = Column(Integer, nullable=True)  # links questions that repeat each other
+    repetition_type = Column(String, nullable=True)
+    repetition_group_id = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

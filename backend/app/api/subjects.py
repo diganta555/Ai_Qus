@@ -29,7 +29,13 @@ def _get_owned_subject(subject_id: int, db: Session, current_user: User) -> Subj
 
 @router.post("", response_model=SubjectOut)
 def create_subject(payload: SubjectCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    subject = Subject(name=payload.name, user_id=current_user.id)
+    subject = Subject(
+        name=payload.name,
+        subject_code=payload.subject_code,
+        description=payload.description,
+        category=payload.category,
+        user_id=current_user.id,
+    )
     db.add(subject)
     db.commit()
     db.refresh(subject)
