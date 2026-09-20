@@ -38,12 +38,12 @@ export default function UploadPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Upload Documents</h1>
-      <p className="text-gray-500 mb-6">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Upload Documents</h1>
+      <p className="text-gray-500 mb-6 text-sm sm:text-base">
         Uploading for: <b>{subjectName}</b>
       </p>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <UploadCard
           title="Syllabus"
           accept=".pdf"
@@ -87,7 +87,7 @@ function UploadCard({ title, accept, multiple, onSelect, status }: UploadCardPro
         accept={accept}
         multiple={multiple}
         onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : null)}
-        className="text-sm mb-3"
+        className="text-sm mb-3 w-full"
       />
       <button
         onClick={() => files && onSelect(files)}
@@ -96,7 +96,7 @@ function UploadCard({ title, accept, multiple, onSelect, status }: UploadCardPro
       >
         Upload
       </button>
-      {status && <p className="text-sm mt-2 text-gray-600">{status}</p>}
+      {status && <p className="text-sm mt-2 text-gray-600 break-words">{status}</p>}
     </div>
   );
 }

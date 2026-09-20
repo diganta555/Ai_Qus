@@ -121,31 +121,31 @@ export default function Results() {
   return (
     <div>
       <p className="text-sm text-gray-400 mb-1">Results &gt; {subjectName}</p>
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="text-2xl font-bold text-gray-900">{subjectName} - Results</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{subjectName} - Results</h1>
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-xs font-medium bg-green-50 text-green-600 px-3 py-1.5 rounded-full">
+          <span className="flex items-center gap-1.5 text-xs font-medium bg-green-50 text-green-600 px-3 py-1.5 rounded-full whitespace-nowrap">
             ✅ Pipeline Completed
           </span>
-          <button className="flex items-center gap-1.5 bg-primary text-white text-sm font-medium px-3 py-1.5 rounded-lg">
+          <button className="flex items-center gap-1.5 bg-primary text-white text-sm font-medium px-3 py-1.5 rounded-lg whitespace-nowrap">
             <RefreshCw size={14} /> Run Again
           </button>
         </div>
       </div>
-      <p className="text-gray-500 mb-4">
+      <p className="text-gray-500 mb-4 text-sm sm:text-base">
         Analysis completed! Here are the key insights and generated questions.
       </p>
 
       {/* Batch switcher — every past "Generate Final Questions" run for this subject */}
       {batches.length > 1 && (
-        <div className="flex items-center gap-2 mb-6">
-          <span className="text-xs text-gray-500 mr-1">Generated sets:</span>
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
+          <span className="text-xs text-gray-500 mr-1 shrink-0">Generated sets:</span>
           {batches.map((b, i) => (
             <button
               key={b.batch_id}
               onClick={() => setSelectedBatch(b.batch_id)}
               title={new Date(b.created_at).toLocaleString()}
-              className={`w-8 h-8 rounded-full text-sm font-medium flex items-center justify-center transition ${
+              className={`w-8 h-8 shrink-0 rounded-full text-sm font-medium flex items-center justify-center transition ${
                 selectedBatch === b.batch_id
                   ? "bg-primary text-white"
                   : "bg-white border border-gray-300 text-gray-600 hover:bg-gray-50"
@@ -158,12 +158,12 @@ export default function Results() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-6 border-b border-gray-200 mb-6">
+      <div className="flex gap-6 border-b border-gray-200 mb-6 overflow-x-auto whitespace-nowrap">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`pb-3 text-sm font-medium ${
+            className={`pb-3 text-sm font-medium shrink-0 ${
               tab === t.key ? "text-primary border-b-2 border-primary" : "text-gray-500"
             }`}
           >
@@ -174,7 +174,7 @@ export default function Results() {
 
       {tab === "overview" && (
         <>
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard icon={FileText} color="bg-purple-50 text-purple-500" label="Documents Processed" value={docs.length} sub="PDFs, Notes" />
             <StatCard icon={Layers} color="bg-blue-50 text-blue-500" label="Topics Identified" value={uniqueTopics} sub="From syllabus & documents" />
             <StatCard
@@ -188,11 +188,11 @@ export default function Results() {
             <StatCard icon={Gauge} color="bg-orange-50 text-orange-500" label="Average Difficulty" value={cap(avgDifficultyLabel)} sub="Based on topic analysis" small />
           </div>
 
-          <div className="grid grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-900">Topic Distribution</h2>
               <p className="text-xs text-gray-500 mb-3">Breakdown of topics based on generated questions</p>
-              <div className="flex items-center justify-center">
+              <div className="flex items-center justify-center overflow-x-auto">
                 <PieChart width={220} height={220}>
                   <Pie data={pieData} dataKey="value" innerRadius={55} outerRadius={90}>
                     {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -203,8 +203,8 @@ export default function Results() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mt-2">
                 {pieData.slice(0, 8).map((p, i) => (
                   <div key={p.name} className="flex items-center gap-1.5 text-gray-600">
-                    <span className="w-2 h-2 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-                    {p.name} {((p.value / questions.length) * 100).toFixed(0)}%
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
+                    <span className="truncate">{p.name} {((p.value / questions.length) * 100).toFixed(0)}%</span>
                   </div>
                 ))}
               </div>
@@ -227,7 +227,7 @@ export default function Results() {
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-1">
                 <h2 className="font-semibold text-gray-900">Source Documents</h2>
-                <button onClick={() => setTab("documents")} className="text-primary text-xs">View All →</button>
+                <button onClick={() => setTab("documents")} className="text-primary text-xs shrink-0">View All →</button>
               </div>
               <p className="text-xs text-gray-500 mb-3">Documents used for analysis</p>
               <div className="space-y-2">
@@ -244,33 +244,35 @@ export default function Results() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
-            <div className="col-span-2 bg-white rounded-xl border border-gray-200 p-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-gray-900">Top Topics by Question Count</h2>
-                <button onClick={() => setTab("topics")} className="text-primary text-xs">View All →</button>
+                <button onClick={() => setTab("topics")} className="text-primary text-xs shrink-0">View All →</button>
               </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 border-b">
-                    <th className="py-2">#</th><th>Topic Name</th><th>No. of Questions</th><th>Avg. Difficulty</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topTopics.map((t, i) => (
-                    <tr key={t.name} className="border-b border-gray-50">
-                      <td className="py-2 text-gray-400">{i + 1}</td>
-                      <td>{t.name}</td>
-                      <td>{t.count}</td>
-                      <td>
-                        <span className="text-xs font-medium bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full capitalize">
-                          {t.avgDifficulty}
-                        </span>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[420px]">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b">
+                      <th className="py-2">#</th><th>Topic Name</th><th>No. of Questions</th><th>Avg. Difficulty</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {topTopics.map((t, i) => (
+                      <tr key={t.name} className="border-b border-gray-50">
+                        <td className="py-2 text-gray-400">{i + 1}</td>
+                        <td>{t.name}</td>
+                        <td>{t.count}</td>
+                        <td>
+                          <span className="text-xs font-medium bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full capitalize">
+                            {t.avgDifficulty}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 flex flex-col items-start justify-center gap-2">
@@ -288,9 +290,9 @@ export default function Results() {
       )}
 
       {tab === "topics" && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-5 overflow-x-auto">
           <h2 className="font-semibold text-gray-900 mb-3">Historical Pattern Analysis</h2>
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[500px]">
             <thead>
               <tr className="text-left text-gray-500 border-b">
                 <th className="py-2">Topic</th><th>Category</th><th>Appearances</th><th>Years</th>
@@ -312,11 +314,11 @@ export default function Results() {
 
       {tab === "questions" && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-full sm:w-auto">
               <button
                 onClick={() => setQuestionsView("paper")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md ${
+                className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded-md ${
                   questionsView === "paper" ? "bg-primary text-white" : "text-gray-500"
                 }`}
               >
@@ -324,22 +326,22 @@ export default function Results() {
               </button>
               <button
                 onClick={() => setQuestionsView("detailed")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md ${
+                className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded-md ${
                   questionsView === "detailed" ? "bg-primary text-white" : "text-gray-500"
                 }`}
               >
                 Detailed View
               </button>
             </div>
-            <button onClick={downloadPdf} className="flex items-center gap-1.5 text-primary text-sm font-medium">
+            <button onClick={downloadPdf} className="flex items-center justify-center gap-1.5 text-primary text-sm font-medium">
               <Download size={14} /> Download PDF
             </button>
           </div>
 
           {questionsView === "paper" ? (
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm max-w-3xl mx-auto p-10" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm max-w-3xl mx-auto p-5 sm:p-10" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
               <div className="text-center border-b-2 border-gray-800 pb-4 mb-6">
-                <h2 className="text-xl font-bold text-gray-900 tracking-wide">{subjectName.toUpperCase()}</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 tracking-wide">{subjectName.toUpperCase()}</h2>
                 <p className="text-sm text-gray-600 mt-1">Question Bank</p>
                 <p className="text-xs text-gray-400 mt-1">Total Questions: {questions.length}</p>
               </div>
@@ -347,7 +349,7 @@ export default function Results() {
                 {questions.map((q, i) => (
                   <div key={q.id} className="flex gap-3">
                     <span className="font-semibold text-gray-900 shrink-0">Q{i + 1}.</span>
-                    <div className="flex-1 flex items-start justify-between gap-4">
+                    <div className="flex-1 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
                       <p className="text-gray-800 leading-relaxed">{q.question_text}</p>
                       {q.marks != null && (
                         <span className="text-sm text-gray-500 shrink-0 whitespace-nowrap">[{q.marks} Marks]</span>
@@ -363,12 +365,12 @@ export default function Results() {
                 <div key={q.id} className="bg-white border border-gray-200 rounded-xl">
                   <button
                     onClick={() => setExpanded(expanded === i ? null : i)}
-                    className="w-full flex items-center justify-between p-4 text-left"
+                    className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 text-left"
                   >
                     <span className="text-sm">
                       Q{i + 1}. [{q.topic_name}] {q.question_text.slice(0, 80)}...
                     </span>
-                    <span className="text-xs font-semibold bg-green-50 text-green-600 px-2.5 py-1 rounded-full ml-3 whitespace-nowrap">
+                    <span className="text-xs font-semibold bg-green-50 text-green-600 px-2.5 py-1 rounded-full sm:ml-3 whitespace-nowrap self-start">
                       Evidence: {q.evidence_score}
                     </span>
                   </button>
@@ -376,7 +378,7 @@ export default function Results() {
                     <div className="px-4 pb-4 text-sm text-gray-700 space-y-1 border-t border-gray-100 pt-3">
                     <p><b>Full question:</b> {q.question_text}</p>
                     {q.answer_text && (
-                      <div className="bg-green-50 border border-green-100 rounded-lg p-3 mt-2">
+                      <div className="bg-green-50 border border-green-100 rounded-lg p-3 mt-2 overflow-x-auto">
                         <p className="font-semibold text-green-800 mb-1">Answer</p>
                         <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
                           {q.answer_text}
@@ -400,12 +402,12 @@ export default function Results() {
           <h2 className="font-semibold text-gray-900 mb-3">All Source Documents</h2>
           <div className="space-y-2">
             {docs.map((d) => (
-              <div key={d.id} className="flex items-center justify-between border border-gray-100 rounded-lg p-3">
-                <div className="flex items-center gap-2">
-                  <FileText size={16} className="text-red-400" />
-                  <span className="text-sm">{d.file_name}</span>
+              <div key={d.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border border-gray-100 rounded-lg p-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText size={16} className="text-red-400 shrink-0" />
+                  <span className="text-sm break-all">{d.file_name}</span>
                 </div>
-                <span className="text-xs text-gray-400 capitalize">{d.document_type.replace(/_/g, " ")}</span>
+                <span className="text-xs text-gray-400 capitalize shrink-0">{d.document_type.replace(/_/g, " ")}</span>
               </div>
             ))}
           </div>
@@ -415,7 +417,7 @@ export default function Results() {
       {tab === "downloads" && (
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h2 className="font-semibold text-gray-900 mb-3">Downloads</h2>
-          <button onClick={downloadPdf} className="bg-primary text-white text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2">
+          <button onClick={downloadPdf} className="w-full sm:w-auto justify-center bg-primary text-white text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2">
             <Download size={16} /> Download Question Bank (PDF)
           </button>
         </div>
@@ -445,7 +447,7 @@ function StatCard({
       <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
         <Icon size={16} />
       </div>
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <p className="text-xs text-gray-500">{label}</p>
           {onViewAll && (

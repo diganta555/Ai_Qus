@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   BookOpen, FileText, BarChart3, HelpCircle, Target, Mail, Lock, Eye, EyeOff,
-  Upload, Sparkles, LineChart, AlertCircle, X,
+  Upload, Sparkles, LineChart, AlertCircle, X, Menu,
 } from "lucide-react";
 import axios from "axios";
 
@@ -27,6 +27,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { login, signup } = useAuth();
   const navigate = useNavigate();
 
@@ -67,6 +68,7 @@ export default function Login() {
 
   const scrollToSection = (id: string) => (e: React.MouseEvent) => {
     e.preventDefault();
+    setMobileMenuOpen(false);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -74,8 +76,8 @@ export default function Login() {
     <div className="min-h-screen bg-gray-50">
       {/* Wrong-password / login-failure popup */}
       {toast && (
-        <div className="fixed top-5 right-5 z-50 animate-[fadeIn_0.2s_ease-out]">
-          <div className="flex items-start gap-3 bg-white border border-red-200 shadow-lg rounded-xl px-4 py-3 max-w-sm">
+        <div className="fixed top-5 right-5 left-5 sm:left-auto z-50 animate-[fadeIn_0.2s_ease-out]">
+          <div className="flex items-start gap-3 bg-white border border-red-200 shadow-lg rounded-xl px-4 py-3 sm:max-w-sm">
             <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={20} />
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-900">Sign in failed</p>
@@ -92,11 +94,11 @@ export default function Login() {
       )}
 
       {/* Top nav */}
-      <header className="flex items-center justify-between px-8 py-4 border-b border-gray-100 bg-white sticky top-0 z-40">
-        <div className="flex items-center gap-2">
-          <BookOpen className="text-primary" size={22} />
-          <span className="font-bold text-gray-900">AI QBank</span>
-          <span className="text-gray-400 text-sm hidden sm:inline">Your Study Companion</span>
+      <header className="flex items-center justify-between px-4 sm:px-8 py-4 border-b border-gray-100 bg-white sticky top-0 z-40">
+        <div className="flex items-center gap-2 min-w-0">
+          <BookOpen className="text-primary shrink-0" size={22} />
+          <span className="font-bold text-gray-900 whitespace-nowrap">AI QBank</span>
+          <span className="text-gray-400 text-sm hidden sm:inline whitespace-nowrap">Your Study Companion</span>
         </div>
         <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
           {NAV_LINKS.map(({ id, label }) => (
@@ -105,36 +107,56 @@ export default function Login() {
             </a>
           ))}
         </nav>
-        <button
-          onClick={() => {
-            setTab("login");
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          className="bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-primaryDark transition"
-        >
-          Sign In
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => {
+              setTab("login");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="bg-primary text-white text-sm font-medium px-3 sm:px-4 py-2 rounded-lg hover:bg-primaryDark transition whitespace-nowrap"
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className="md:hidden text-gray-500 hover:text-gray-800 p-1"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </header>
 
+      {/* Mobile nav dropdown */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-white border-b border-gray-100 px-4 py-3 flex flex-col gap-3 sticky top-[65px] z-30">
+          {NAV_LINKS.map(({ id, label }) => (
+            <a key={id} href={`#${id}`} onClick={scrollToSection(id)} className="text-sm text-gray-600 hover:text-gray-900">
+              {label}
+            </a>
+          ))}
+        </div>
+      )}
+
       {/* Hero + auth card — fills the first viewport (minus the header) */}
-      <div className="min-h-[calc(100vh-73px)] max-w-6xl mx-auto px-8 py-16 grid md:grid-cols-2 gap-12 items-center content-center">
+      <div className="min-h-[calc(100vh-73px)] max-w-6xl mx-auto px-4 sm:px-8 py-12 sm:py-16 grid md:grid-cols-2 gap-10 md:gap-12 items-center content-center">
         {/* Left: marketing content */}
         <div>
           <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-primary/10 text-primary px-3 py-1.5 rounded-full mb-4">
             📚 From Past Papers to Better Preparation
           </span>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
             Smarter Preparation<br />
             <span className="text-primary">with AI</span>
           </h1>
-          <p className="text-gray-500 text-lg mb-8 max-w-md">
+          <p className="text-gray-500 text-base sm:text-lg mb-8 max-w-md">
             Upload your study materials, analyze past year questions, and get AI-powered
             questions, insights, and personalized practice — all in one place.
           </p>
         </div>
 
         {/* Right: auth card */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 w-full max-w-md mx-auto">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8 w-full max-w-md mx-auto">
           <h2 className="text-xl font-bold text-gray-900">
             {tab === "login" ? "Welcome Back" : "Create your account"}
           </h2>
@@ -239,7 +261,7 @@ export default function Login() {
 
       {/* Features section */}
       <section id="features" className="scroll-mt-[73px] min-h-[calc(100vh-73px)] flex items-center border-t border-gray-100 bg-white">
-        <div className="max-w-6xl mx-auto px-8 py-16 w-full">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-12 sm:py-16 w-full">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-3">
             Everything you need to prepare smarter
           </h2>
@@ -258,7 +280,7 @@ export default function Login() {
 
       {/* Subjects section */}
       <section id="subjects" className="scroll-mt-[73px] min-h-[calc(100vh-73px)] flex items-center border-t border-gray-100 bg-white">
-        <div className="max-w-6xl mx-auto px-8 py-16 w-full">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-12 sm:py-16 w-full">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-3">
             Works for any subject
           </h2>
@@ -278,11 +300,11 @@ export default function Login() {
 
       {/* How It Works section */}
       <section id="how-it-works" className="scroll-mt-[73px] min-h-[calc(100vh-73px)] flex items-center bg-gray-50">
-        <div className="max-w-6xl mx-auto px-8 py-16 w-full">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-12 sm:py-16 w-full">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-10">
             How It Works
           </h2>
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             <Step number={1} icon={Upload} title="Upload materials" desc="Add your syllabus, notes, and previous year question papers." />
             <Step number={2} icon={LineChart} title="AI analyzes patterns" desc="We find recurring topics, weightage, and question trends." />
             <Step number={3} icon={Sparkles} title="Generate questions" desc="Grounded, high-quality questions are created from your material." />
@@ -293,7 +315,7 @@ export default function Login() {
 
       {/* About section */}
       <section id="about" className="scroll-mt-[73px] min-h-[calc(100vh-73px)] flex items-center border-t border-gray-100 bg-white">
-        <div className="max-w-3xl mx-auto px-8 py-16 text-center w-full">
+        <div className="max-w-3xl mx-auto px-4 sm:px-8 py-12 sm:py-16 text-center w-full">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">About AI QBank</h2>
           <p className="text-gray-500 leading-relaxed">
             AI QBank was built to solve a simple problem: students spend hours guessing what to
@@ -314,7 +336,7 @@ export default function Login() {
       </section>
 
       <footer className="border-t border-gray-100 bg-white">
-        <div className="max-w-6xl mx-auto px-8 py-8 text-center text-sm text-gray-400">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 text-center text-sm text-gray-400">
           © {new Date().getFullYear()} AI QBank — Your Study Companion
         </div>
       </footer>

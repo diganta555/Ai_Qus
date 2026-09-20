@@ -48,20 +48,20 @@ export default function AskQuestion() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <h1 className="text-2xl font-bold text-gray-900">Ask a Question</h1>
-      <p className="text-gray-500 mb-4">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Ask a Question</h1>
+      <p className="text-gray-500 mb-4 text-sm sm:text-base">
         Ask anything about <b>{subjectName}</b> — answers are grounded in your uploaded study
         material and syllabus.
       </p>
 
       <div className="flex-1 overflow-y-auto space-y-4 mb-4">
         {messages.map((m, i) => (
-          <div key={i} className={`max-w-2xl ${m.role === "user" ? "ml-auto" : ""}`}>
+          <div key={i} className={`max-w-[88%] sm:max-w-2xl ${m.role === "user" ? "ml-auto" : ""}`}>
             <div
               className={`rounded-xl px-4 py-2.5 ${
                 m.role === "user"
                   ? "bg-primary text-white"
-                  : "bg-white border border-gray-200 prose prose-sm max-w-none"
+                  : "bg-white border border-gray-200 prose prose-sm max-w-none overflow-x-auto"
               }`}
             >
               {m.role === "assistant" ? (
@@ -87,13 +87,13 @@ export default function AskQuestion() {
 
       <div className="flex gap-2">
         <input
-          className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5"
+          className="flex-1 min-w-0 rounded-lg border border-gray-300 px-4 py-2.5"
           placeholder="Ask a question about this subject..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
         />
-        <button onClick={send} className="bg-primary text-white px-4 rounded-lg">
+        <button onClick={send} className="bg-primary text-white px-4 rounded-lg shrink-0">
           <Send size={18} />
         </button>
       </div>

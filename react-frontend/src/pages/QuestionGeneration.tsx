@@ -135,8 +135,8 @@ export default function QuestionGeneration() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">AI Question Generation Engine</h1>
-      <p className="text-gray-500 mb-4">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">AI Question Generation Engine</h1>
+      <p className="text-gray-500 mb-4 text-sm sm:text-base">
         Run the analysis pipeline for: <b>{subjectName}</b>
       </p>
 
@@ -148,8 +148,8 @@ export default function QuestionGeneration() {
       )}
 
       {/* Run Full Pipeline */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
-        <div className="flex items-center justify-between mb-3">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
           <div>
             <h2 className="font-semibold text-gray-900">Run Analysis Pipeline</h2>
             <p className="text-sm text-gray-500">
@@ -159,7 +159,7 @@ export default function QuestionGeneration() {
           <button
             onClick={runFullPipeline}
             disabled={pipelineRunning}
-            className="bg-primary text-white px-5 py-2.5 rounded-lg font-medium disabled:opacity-60 flex items-center gap-2"
+            className="bg-primary text-white px-5 py-2.5 rounded-lg font-medium disabled:opacity-60 flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             {pipelineRunning ? (
               <>
@@ -219,9 +219,9 @@ export default function QuestionGeneration() {
       </div>
 
       {/* Generate Questions */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
         <h2 className="font-semibold mb-4">Generate Questions</h2>
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           {(
             [
               ["num_topics", "Number of top topics"],
@@ -243,7 +243,7 @@ export default function QuestionGeneration() {
         <button
           onClick={generate}
           disabled={genLoading}
-          className="bg-primary text-white px-5 py-2.5 rounded-lg font-medium disabled:opacity-50"
+          className="w-full sm:w-auto bg-primary text-white px-5 py-2.5 rounded-lg font-medium disabled:opacity-50"
         >
           {genLoading ? "Generating... this may take 1-2 minutes" : "⚡ Generate Final Questions"}
         </button>
@@ -269,12 +269,12 @@ export default function QuestionGeneration() {
             <div className="space-y-2">
               {preview.map((q, i) => (
                 <div key={q.id} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <span className="text-sm text-gray-800">
                       Q{i + 1}. [{q.topic_name}] {q.question_text.slice(0, 90)}
                       {q.question_text.length > 90 ? "..." : ""}
                     </span>
-                    <span className="text-xs font-semibold bg-green-50 text-green-600 px-2.5 py-1 rounded-full ml-3 whitespace-nowrap">
+                    <span className="text-xs font-semibold bg-green-50 text-green-600 px-2.5 py-1 rounded-full sm:ml-3 whitespace-nowrap self-start">
                       {q.evidence_score}
                     </span>
                   </div>

@@ -42,35 +42,35 @@ export default function Dashboard() {
   return (
     <div>
       {/* Top bar */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="relative w-96 max-w-full">
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="relative flex-1 sm:w-96 sm:flex-none max-w-full">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             placeholder="Search subjects, documents, questions..."
             className="w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
-        <button className="text-gray-400 hover:text-gray-600">
+        <button className="text-gray-400 hover:text-gray-600 shrink-0">
           <Bell size={20} />
         </button>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900">Welcome back, {userName}! 👋</h1>
-      <p className="text-gray-500 mb-6">Ready to generate questions and boost your preparation?</p>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Welcome back, {userName}! 👋</h1>
+      <p className="text-gray-500 mb-6 text-sm sm:text-base">Ready to generate questions and boost your preparation?</p>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <StatCard icon={FileText} color="bg-purple-50 text-purple-500" label="Total Subjects" value={subjects.length} sub="Manage your subjects" />
         <StatCard icon={FileText} color="bg-green-50 text-green-500" label="Documents Uploaded" value={totalDocs} sub="PDFs, Notes, PYQs" />
         <StatCard icon={HelpCircle} color="bg-orange-50 text-orange-500" label="Questions Generated" value={totalQuestions} sub="Across all subjects" />
       </div>
 
       {/* Quick actions + recent subjects */}
-      <div className="grid grid-cols-3 gap-6 mb-8">
-        <div className="col-span-2 bg-white rounded-xl border border-gray-200 p-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
           <h2 className="font-semibold text-gray-900">Quick Actions</h2>
           <p className="text-sm text-gray-500 mb-4">Get started with these common tasks</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <QuickAction
               icon={Upload}
               color="bg-blue-50 text-blue-500"

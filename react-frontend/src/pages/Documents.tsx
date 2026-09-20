@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import api from "../api/client";
-import { Trash2, Search, Bell, UploadCloud } from "lucide-react";
+import { Trash2, Search, Bell, UploadCloud, AlertCircle } from "lucide-react";
 import type { OutletContext } from "../components/Layout";
 import type { Document, DocumentType } from "../types";
 import axios from "axios";
@@ -70,23 +70,33 @@ export default function Documents() {
   return (
     <div>
       {/* Top bar */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="relative w-96 max-w-full">
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="relative flex-1 sm:w-96 sm:flex-none max-w-full">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             placeholder="Search subjects, documents, questions..."
             className="w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
-        <button className="text-gray-400 hover:text-gray-600">
+        <button className="text-gray-400 hover:text-gray-600 shrink-0">
           <Bell size={20} />
         </button>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900">Documents</h1>
-      <p className="text-gray-500 mb-6">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Documents</h1>
+      <p className="text-gray-500 mb-4 text-sm sm:text-base">
         Upload and manage documents for: <b>{subjectName}</b>
       </p>
+
+      {/* PDF-only declaration */}
+      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 mb-6 text-sm">
+        <AlertCircle size={16} className="shrink-0 mt-0.5" />
+        <p>
+          Only PDF files are accepted for upload. We do not convert images or scanned photos to
+          PDF automatically — please convert any image or photo of a document into a PDF yourself
+          before uploading it here.
+        </p>
+      </div>
 
       {/* Upload section */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
@@ -96,11 +106,11 @@ export default function Documents() {
           </div>
           <div>
             <h2 className="font-semibold text-gray-900">Upload Documents</h2>
-            <p className="text-sm text-gray-500">Add syllabus, study material, or previous year papers.</p>
+            <p className="text-sm text-gray-500">Add syllabus, study material, or previous year papers (PDF only).</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <UploadCard
             title="Syllabus"
             onSelect={(files) => upload(files[0], "syllabus", "syllabus")}
@@ -122,7 +132,7 @@ export default function Documents() {
 
       {/* Document list */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between gap-3 mb-4">
           <h2 className="font-semibold text-gray-900">Uploaded Documents</h2>
           <select
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
@@ -142,10 +152,10 @@ export default function Documents() {
           {filtered.map((d) => (
             <div
               key={d.id}
-              className="border border-gray-100 rounded-lg p-3 flex items-center justify-between"
+              className="border border-gray-100 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
             >
-              <span className="text-sm">📄 {d.file_name}</span>
-              <div className="flex items-center gap-3">
+              <span className="text-sm break-all">📄 {d.file_name}</span>
+              <div className="flex items-center gap-3 flex-wrap">
                 <span
                   className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badgeColor(
                     d.document_type
@@ -181,7 +191,7 @@ function UploadCard({ title, multiple, onSelect, status }: UploadCardProps) {
       <p className="text-sm font-medium mb-2">{title}</p>
       <input
         type="file"
-        accept=".pdf"
+        accept="application/pdf,.pdf"
         multiple={multiple}
         onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : null)}
         className="text-xs mb-3 w-full"
