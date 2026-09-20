@@ -1,12 +1,12 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useEffect, useState } from "react";  
+import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import api from "../api/client";
 import type { Subject } from "../types";
 import {
   BookOpen, LayoutDashboard, Folder, FileText, Upload,
-  Sparkles, MessageCircle, BarChart3, LogOut,
+  Sparkles, MessageCircle, BarChart3, LogOut, Menu, X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -42,6 +42,7 @@ export default function Layout({ subjectId, setSubjectId }: LayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     api.listSubjects().then((r) => {
@@ -63,11 +64,32 @@ export default function Layout({ subjectId, setSubjectId }: LayoutProps) {
   const activeSubject = subjects.find((s) => s.id === subjectId);
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col p-4">
-        <div className="flex items-center gap-2 mb-1">
-          <BookOpen className="text-primary" size={22} />
-          <span className="font-bold text-gray-900">AI QBank</span>
+    <div className="min-h-screen md:flex">
+      {/* Backdrop — closes the drawer when tapped, mobile only */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 bg-black/30 z-40 md:hidden"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col p-4 transform transition-transform duration-200 ease-in-out
+          md:static md:translate-x-0 md:z-auto
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <BookOpen className="text-primary" size={22} />
+            <span className="font-bold text-gray-900">AI QBank</span>
+          </div>
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="md:hidden text-gray-400 hover:text-gray-600"
+            aria-label="Close menu"
+          >
+            <X size={20} />
+          </button>
         </div>
         <p className="text-xs text-gray-400 mb-4">Your Study Companion</p>
 
@@ -107,12 +129,13 @@ export default function Layout({ subjectId, setSubjectId }: LayoutProps) {
           </div>
         )}
 
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-col gap-1 overflow-y-auto">
           {NAV.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               end={to === "/"}
+              onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition ${
                   isActive
@@ -128,9 +151,27 @@ export default function Layout({ subjectId, setSubjectId }: LayoutProps) {
         </nav>
       </aside>
 
-      <main className="flex-1 p-8 overflow-y-auto">
-        <Outlet context={context} />
-      </main>
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile top bar */}
+        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white sticky top-0 z-30">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="text-gray-500 hover:text-gray-800 p-1"
+            aria-label="Open menu"
+          >
+            <Menu size={22} />
+          </button>
+          <div className="flex items-center gap-2">
+            <BookOpen className="text-primary" size={18} />
+            <span className="font-bold text-gray-900 text-sm">AI QBank</span>
+          </div>
+          <div style={{ width: 22 }} />
+        </div>
+
+        <main className="flex-1 p-4 sm:p-8 overflow-y-auto min-w-0">
+          <Outlet context={context} />
+        </main>
+      </div>
     </div>
   );
 }
