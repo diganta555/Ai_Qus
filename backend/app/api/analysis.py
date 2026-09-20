@@ -1,35 +1,35 @@
-import json
-import os as _os
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
-from fastapi.responses import Response
-
 from app.database.connection import get_db, SessionLocal
 from app.services.analysis_service import AnalysisService
 from app.models.syllabus import SyllabusUnit, SyllabusTopic, SyllabusSubtopic
 from app.models.question import ExtractedQuestion
 from app.models.concept import Concept
+import json
 from app.models.pattern import TopicPatternRecord
 from app.models.generated_question import GeneratedQuestion
-from app.models.subject import Subject
-from app.models.job import PipelineJob
-from app.schemas.question import AskQuestionRequest
+from fastapi.responses import Response
 from app.engine.pdf_exporter import build_questions_pdf
+from app.models.subject import Subject
+from app.schemas.question import AskQuestionRequest
+from app.models.job import PipelineJob
+import os as _os
 
 router = APIRouter(prefix="/subjects", tags=["analysis"])
 
 
 # ---------------------------------------------------------------------------
-# Background job runner + status
+# Background job runner — every pipeline step goes through this so a slow
+# LLM-bound step can't block the HTTP request past Railway's proxy timeout.
 # ---------------------------------------------------------------------------
 
-def _run_job(subject_id: int, step: str, task_fn):
-    db = SessionLocal()
+def _run_job(db_factory, subject_id: int, step: str, func):
+    db = db_factory()
     job = PipelineJob(subject_id=subject_id, step=step, status="running")
     db.add(job)
     db.commit()
     try:
-        task_fn(db, subject_id)
+        func(db, subject_id)
         job.status = "success"
     except Exception as e:
         job.status = "failed"
@@ -39,11 +39,11 @@ def _run_job(subject_id: int, step: str, task_fn):
 
 
 @router.get("/{subject_id}/job-status/{step}")
-def get_job_status(subject_id: int, step: str, db: Session = Depends(get_db)):
+def job_status(subject_id: int, step: str, db: Session = Depends(get_db)):
     job = (
         db.query(PipelineJob)
         .filter(PipelineJob.subject_id == subject_id, PipelineJob.step == step)
-        .order_by(PipelineJob.created_at.desc())
+        .order_by(PipelineJob.id.desc())
         .first()
     )
     if not job:
@@ -52,14 +52,19 @@ def get_job_status(subject_id: int, step: str, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Step 1: Analyze Syllabus
+# 1. Analyze Syllabus
 # ---------------------------------------------------------------------------
 
 @router.post("/{subject_id}/analyze-syllabus")
 def analyze_syllabus(subject_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
     def task(db_session, sid):
         AnalysisService(db_session).analyze_syllabus(sid)
-    background_tasks.add_task(_run_job, subject_id, "analyze_syllabus", task)
+
+    background_tasks.add_task(_run_job, SessionLocal, subject_id, "analyze_syllabus", task)
     return {"status": "started"}
 
 
@@ -85,14 +90,19 @@ def get_syllabus(subject_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Step 2: Extract PYQs
+# 2. Extract PYQs
 # ---------------------------------------------------------------------------
 
 @router.post("/{subject_id}/extract-pyqs")
 def extract_pyqs(subject_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
     def task(db_session, sid):
         AnalysisService(db_session).extract_pyqs(sid)
-    background_tasks.add_task(_run_job, subject_id, "extract_pyqs", task)
+
+    background_tasks.add_task(_run_job, SessionLocal, subject_id, "extract_pyqs", task)
     return {"status": "started"}
 
 
@@ -118,19 +128,26 @@ def get_extracted_questions(subject_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Step 3: Classify Topics
+# 3. Classify Topics
 # ---------------------------------------------------------------------------
 
 @router.post("/{subject_id}/classify-topics")
 def classify_topics(subject_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
     def task(db_session, sid):
         AnalysisService(db_session).classify_topics(sid)
-    background_tasks.add_task(_run_job, subject_id, "classify_topics", task)
+
+    background_tasks.add_task(_run_job, SessionLocal, subject_id, "classify_topics", task)
     return {"status": "started"}
 
 
 @router.get("/{subject_id}/questions-by-topic")
 def get_questions_by_topic(subject_id: int, db: Session = Depends(get_db)):
+    from app.models.syllabus import SyllabusTopic, SyllabusUnit
+
     questions = db.query(ExtractedQuestion).filter(ExtractedQuestion.subject_id == subject_id).all()
     output = []
     for q in questions:
@@ -154,14 +171,19 @@ def get_questions_by_topic(subject_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Step 4: Map Concepts
+# 4. Map Concepts
 # ---------------------------------------------------------------------------
 
 @router.post("/{subject_id}/map-concepts")
 def map_concepts(subject_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
     def task(db_session, sid):
         AnalysisService(db_session).map_concepts(sid)
-    background_tasks.add_task(_run_job, subject_id, "map_concepts", task)
+
+    background_tasks.add_task(_run_job, SessionLocal, subject_id, "map_concepts", task)
     return {"status": "started"}
 
 
@@ -182,14 +204,19 @@ def get_concepts(subject_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Step 5: Analyze Repetition
+# 5. Analyze Repetition
 # ---------------------------------------------------------------------------
 
 @router.post("/{subject_id}/analyze-repetition")
 def analyze_repetition(subject_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
     def task(db_session, sid):
         AnalysisService(db_session).analyze_repetition(sid)
-    background_tasks.add_task(_run_job, subject_id, "analyze_repetition", task)
+
+    background_tasks.add_task(_run_job, SessionLocal, subject_id, "analyze_repetition", task)
     return {"status": "started"}
 
 
@@ -214,14 +241,19 @@ def get_repeated_questions(subject_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Step 6: Analyze Patterns
+# 6. Analyze Patterns
 # ---------------------------------------------------------------------------
 
 @router.post("/{subject_id}/analyze-patterns")
 def analyze_patterns(subject_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
     def task(db_session, sid):
         AnalysisService(db_session).analyze_patterns(sid)
-    background_tasks.add_task(_run_job, subject_id, "analyze_patterns", task)
+
+    background_tasks.add_task(_run_job, SessionLocal, subject_id, "analyze_patterns", task)
     return {"status": "started"}
 
 
@@ -253,15 +285,31 @@ def get_patterns(subject_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Step 7: Build Knowledge Base
+# 7. Build Knowledge Base
 # ---------------------------------------------------------------------------
 
 @router.post("/{subject_id}/build-knowledge-base")
 def build_knowledge_base(subject_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
     def task(db_session, sid):
         AnalysisService(db_session).build_knowledge_base(sid)
-    background_tasks.add_task(_run_job, subject_id, "build_knowledge_base", task)
+
+    background_tasks.add_task(_run_job, SessionLocal, subject_id, "build_knowledge_base", task)
     return {"status": "started"}
+
+
+@router.get("/{subject_id}/knowledge-base-test")
+def test_knowledge_base(subject_id: int, query: str, top_k: int = 5, db: Session = Depends(get_db)):
+    """Quick manual test of retrieval — full RAG retrieval logic comes in Step 13."""
+    service = AnalysisService(db)
+    try:
+        results = service.rag_engine.retrieve(subject_id, query, top_k)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return results
 
 
 @router.get("/{subject_id}/knowledge-base-status")
@@ -269,16 +317,6 @@ def knowledge_base_status(subject_id: int, db: Session = Depends(get_db)):
     index_path = f"./storage/vectorstore/subject_{subject_id}/index.faiss"
     exists = _os.path.exists(index_path)
     return {"exists": exists}
-
-
-@router.get("/{subject_id}/knowledge-base-test")
-def test_knowledge_base(subject_id: int, query: str, top_k: int = 5, db: Session = Depends(get_db)):
-    service = AnalysisService(db)
-    try:
-        results = service.rag_engine.retrieve(subject_id, query, top_k)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    return results
 
 
 @router.get("/{subject_id}/retrieve-for-topic")
@@ -291,34 +329,6 @@ def retrieve_for_topic(subject_id: int, topic: str, top_k: int = 5, db: Session 
     return result
 
 
-# ---------------------------------------------------------------------------
-# Pipeline status (overall)
-# ---------------------------------------------------------------------------
-
-@router.get("/{subject_id}/pipeline-status")
-def pipeline_status(subject_id: int, db: Session = Depends(get_db)):
-    has_syllabus = db.query(SyllabusUnit).filter(SyllabusUnit.subject_id == subject_id).first() is not None
-    has_pyqs = db.query(ExtractedQuestion).filter(ExtractedQuestion.subject_id == subject_id).first() is not None
-    has_topics = db.query(ExtractedQuestion).filter(ExtractedQuestion.subject_id == subject_id, ExtractedQuestion.topic_id.isnot(None)).first() is not None
-    has_concepts = db.query(Concept).filter(Concept.subject_id == subject_id).first() is not None
-    has_patterns = db.query(TopicPatternRecord).filter(TopicPatternRecord.subject_id == subject_id).first() is not None
-    kb_exists = _os.path.exists(f"./storage/vectorstore/subject_{subject_id}/index.faiss")
-
-    return {
-        "analyze_syllabus": has_syllabus,
-        "extract_pyqs": has_pyqs,
-        "classify_topics": has_topics,
-        "map_concepts": has_concepts,
-        "analyze_repetition": has_topics,
-        "analyze_patterns": has_patterns,
-        "build_knowledge_base": kb_exists,
-    }
-
-
-# ---------------------------------------------------------------------------
-# Blueprints
-# ---------------------------------------------------------------------------
-
 @router.get("/{subject_id}/blueprints")
 def get_blueprints(subject_id: int, db: Session = Depends(get_db)):
     service = AnalysisService(db)
@@ -330,7 +340,8 @@ def get_blueprints(subject_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Question generation
+# Final generation — kept synchronous (single LLM pass over pre-built
+# knowledge base, not a loop over many PDFs, so it doesn't hit the timeout).
 # ---------------------------------------------------------------------------
 
 @router.post("/{subject_id}/generate-questions")
@@ -379,6 +390,7 @@ def get_final_questions(subject_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{subject_id}/all-candidates")
 def get_all_candidates(subject_id: int, db: Session = Depends(get_db)):
+    """Debug view: see rejected candidates too, not just the final ranked ones."""
     questions = db.query(GeneratedQuestion).filter(GeneratedQuestion.subject_id == subject_id).all()
     return [
         {
@@ -433,10 +445,6 @@ def download_final_questions_pdf(subject_id: int, db: Session = Depends(get_db))
     )
 
 
-# ---------------------------------------------------------------------------
-# Ask Question
-# ---------------------------------------------------------------------------
-
 @router.post("/{subject_id}/ask")
 def ask_question(subject_id: int, payload: AskQuestionRequest, db: Session = Depends(get_db)):
     service = AnalysisService(db)
@@ -446,10 +454,6 @@ def ask_question(subject_id: int, payload: AskQuestionRequest, db: Session = Dep
         raise HTTPException(status_code=404, detail=str(e))
     return result
 
-
-# ---------------------------------------------------------------------------
-# Batches
-# ---------------------------------------------------------------------------
 
 @router.get("/{subject_id}/batches")
 def list_batches(subject_id: int, db: Session = Depends(get_db)):
@@ -499,3 +503,27 @@ def get_batch_questions(subject_id: int, batch_id: str, db: Session = Depends(ge
         }
         for q in questions
     ]
+
+
+@router.get("/{subject_id}/pipeline-status")
+def pipeline_status(subject_id: int, db: Session = Depends(get_db)):
+    from app.models.syllabus import SyllabusUnit
+    from app.models.concept import Concept
+
+    has_syllabus = db.query(SyllabusUnit).filter(SyllabusUnit.subject_id == subject_id).first() is not None
+    has_pyqs = db.query(ExtractedQuestion).filter(ExtractedQuestion.subject_id == subject_id).first() is not None
+    has_topics = db.query(ExtractedQuestion).filter(ExtractedQuestion.subject_id == subject_id, ExtractedQuestion.topic_id.isnot(None)).first() is not None
+    has_concepts = db.query(Concept).filter(Concept.subject_id == subject_id).first() is not None
+    has_patterns = db.query(TopicPatternRecord).filter(TopicPatternRecord.subject_id == subject_id).first() is not None
+
+    kb_exists = _os.path.exists(f"./storage/vectorstore/subject_{subject_id}/index.faiss")
+
+    return {
+        "analyze_syllabus": has_syllabus,
+        "extract_pyqs": has_pyqs,
+        "classify_topics": has_topics,
+        "map_concepts": has_concepts,
+        "analyze_repetition": has_topics,  # repetition tags live on ExtractedQuestion too
+        "analyze_patterns": has_patterns,
+        "build_knowledge_base": kb_exists,
+    }

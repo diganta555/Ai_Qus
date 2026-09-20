@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import api from "../api/client";
+import type { QuestionBatch } from "../api/client";
 import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import type { OutletContext } from "../components/Layout";
 import type { GeneratedQuestion, TopicPattern, Document } from "../types";
@@ -31,13 +32,36 @@ export default function Results() {
   const [docs, setDocs] = useState<Document[]>([]);
   const [tab, setTab] = useState<Tab>("overview");
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [questionsView, setQuestionsView] = useState<"paper" | "detailed">("paper");
+  const [batches, setBatches] = useState<QuestionBatch[]>([]);
+  const [selectedBatch, setSelectedBatch] = useState<string | null>(null);
 
+  // Load every past generation for this subject, oldest first, and default
+  // to showing the most recent one.
   useEffect(() => {
     if (!subjectId) return;
-    api.finalQuestions(subjectId).then((r) => setQuestions(r.data));
+    setBatches([]);
+    setSelectedBatch(null);
+    setQuestions([]);
     api.patterns(subjectId).then((r) => setPatterns(r.data));
     api.listDocuments(subjectId).then((r) => setDocs(r.data));
+    api.listBatches(subjectId).then((r) => {
+      const sorted = [...r.data].sort((a, b) => a.batch_id.localeCompare(b.batch_id));
+      setBatches(sorted);
+      if (sorted.length > 0) {
+        setSelectedBatch(sorted[sorted.length - 1].batch_id);
+      } else {
+        // Fallback for any rows that predate batch tracking
+        api.finalQuestions(subjectId).then((r2) => setQuestions(r2.data));
+      }
+    });
   }, [subjectId]);
+
+  // Fetch the questions for whichever batch is selected
+  useEffect(() => {
+    if (!subjectId || !selectedBatch) return;
+    api.batchQuestions(subjectId, selectedBatch).then((r) => setQuestions(r.data));
+  }, [subjectId, selectedBatch]);
 
   if (!subjectId) return <p className="text-yellow-700">Select a subject in the sidebar first.</p>;
   const subjectName = subjects.find((s) => s.id === subjectId)?.name || "";
@@ -108,9 +132,30 @@ export default function Results() {
           </button>
         </div>
       </div>
-      <p className="text-gray-500 mb-6">
+      <p className="text-gray-500 mb-4">
         Analysis completed! Here are the key insights and generated questions.
       </p>
+
+      {/* Batch switcher — every past "Generate Final Questions" run for this subject */}
+      {batches.length > 1 && (
+        <div className="flex items-center gap-2 mb-6">
+          <span className="text-xs text-gray-500 mr-1">Generated sets:</span>
+          {batches.map((b, i) => (
+            <button
+              key={b.batch_id}
+              onClick={() => setSelectedBatch(b.batch_id)}
+              title={new Date(b.created_at).toLocaleString()}
+              className={`w-8 h-8 rounded-full text-sm font-medium flex items-center justify-center transition ${
+                selectedBatch === b.batch_id
+                  ? "bg-primary text-white"
+                  : "bg-white border border-gray-300 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {i + 1}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-6 border-b border-gray-200 mb-6">
@@ -132,7 +177,14 @@ export default function Results() {
           <div className="grid grid-cols-4 gap-4 mb-6">
             <StatCard icon={FileText} color="bg-purple-50 text-purple-500" label="Documents Processed" value={docs.length} sub="PDFs, Notes" />
             <StatCard icon={Layers} color="bg-blue-50 text-blue-500" label="Topics Identified" value={uniqueTopics} sub="From syllabus & documents" />
-            <StatCard icon={HelpCircle} color="bg-green-50 text-green-500" label="Questions Generated" value={questions.length} sub="High-quality questions" />
+            <StatCard
+              icon={HelpCircle}
+              color="bg-green-50 text-green-500"
+              label="Questions Generated"
+              value={questions.length}
+              sub="High-quality questions"
+              onViewAll={() => setTab("questions")}
+            />
             <StatCard icon={Gauge} color="bg-orange-50 text-orange-500" label="Average Difficulty" value={cap(avgDifficultyLabel)} sub="Based on topic analysis" small />
           </div>
 
@@ -259,38 +311,87 @@ export default function Results() {
       )}
 
       {tab === "questions" && (
-        <div className="space-y-2">
-          {questions.map((q, i) => (
-            <div key={q.id} className="bg-white border border-gray-200 rounded-xl">
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
               <button
-                onClick={() => setExpanded(expanded === i ? null : i)}
-                className="w-full flex items-center justify-between p-4 text-left"
+                onClick={() => setQuestionsView("paper")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md ${
+                  questionsView === "paper" ? "bg-primary text-white" : "text-gray-500"
+                }`}
               >
-                <span className="text-sm">
-                  Q{i + 1}. [{q.topic_name}] {q.question_text.slice(0, 80)}...
-                </span>
-                <span className="text-xs font-semibold bg-green-50 text-green-600 px-2.5 py-1 rounded-full ml-3 whitespace-nowrap">
-                  Evidence: {q.evidence_score}
-                </span>
+                Paper Preview
               </button>
-              {expanded === i && (
-                <div className="px-4 pb-4 text-sm text-gray-700 space-y-1 border-t border-gray-100 pt-3">
-                <p><b>Full question:</b> {q.question_text}</p>
-                {q.answer_text && (
-                  <div className="bg-green-50 border border-green-100 rounded-lg p-3 mt-2">
-                    <p className="font-semibold text-green-800 mb-1">Answer</p>
-                    <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                      {q.answer_text}
-                    </ReactMarkdown>
-                  </div>
-                )}
-                  <p><b>Marks:</b> {q.marks} | <b>Difficulty:</b> {q.difficulty} | <b>Type:</b> {q.question_type}</p>
-                  <p><b>Why this question?</b> {q.generation_reason}</p>
-                  <p><b>Supporting years:</b> {q.supporting_years?.join(", ")}</p>
-                </div>
-              )}
+              <button
+                onClick={() => setQuestionsView("detailed")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md ${
+                  questionsView === "detailed" ? "bg-primary text-white" : "text-gray-500"
+                }`}
+              >
+                Detailed View
+              </button>
             </div>
-          ))}
+            <button onClick={downloadPdf} className="flex items-center gap-1.5 text-primary text-sm font-medium">
+              <Download size={14} /> Download PDF
+            </button>
+          </div>
+
+          {questionsView === "paper" ? (
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm max-w-3xl mx-auto p-10" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+              <div className="text-center border-b-2 border-gray-800 pb-4 mb-6">
+                <h2 className="text-xl font-bold text-gray-900 tracking-wide">{subjectName.toUpperCase()}</h2>
+                <p className="text-sm text-gray-600 mt-1">Question Bank</p>
+                <p className="text-xs text-gray-400 mt-1">Total Questions: {questions.length}</p>
+              </div>
+              <div className="space-y-5">
+                {questions.map((q, i) => (
+                  <div key={q.id} className="flex gap-3">
+                    <span className="font-semibold text-gray-900 shrink-0">Q{i + 1}.</span>
+                    <div className="flex-1 flex items-start justify-between gap-4">
+                      <p className="text-gray-800 leading-relaxed">{q.question_text}</p>
+                      {q.marks != null && (
+                        <span className="text-sm text-gray-500 shrink-0 whitespace-nowrap">[{q.marks} Marks]</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {questions.map((q, i) => (
+                <div key={q.id} className="bg-white border border-gray-200 rounded-xl">
+                  <button
+                    onClick={() => setExpanded(expanded === i ? null : i)}
+                    className="w-full flex items-center justify-between p-4 text-left"
+                  >
+                    <span className="text-sm">
+                      Q{i + 1}. [{q.topic_name}] {q.question_text.slice(0, 80)}...
+                    </span>
+                    <span className="text-xs font-semibold bg-green-50 text-green-600 px-2.5 py-1 rounded-full ml-3 whitespace-nowrap">
+                      Evidence: {q.evidence_score}
+                    </span>
+                  </button>
+                  {expanded === i && (
+                    <div className="px-4 pb-4 text-sm text-gray-700 space-y-1 border-t border-gray-100 pt-3">
+                    <p><b>Full question:</b> {q.question_text}</p>
+                    {q.answer_text && (
+                      <div className="bg-green-50 border border-green-100 rounded-lg p-3 mt-2">
+                        <p className="font-semibold text-green-800 mb-1">Answer</p>
+                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                          {q.answer_text}
+                        </ReactMarkdown>
+                      </div>
+                    )}
+                      <p><b>Marks:</b> {q.marks} | <b>Difficulty:</b> {q.difficulty} | <b>Type:</b> {q.question_type}</p>
+                      <p><b>Why this question?</b> {q.generation_reason}</p>
+                      <p><b>Supporting years:</b> {q.supporting_years?.join(", ")}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -334,17 +435,25 @@ function mostCommon(arr: string[]): string {
 }
 
 function StatCard({
-  icon: Icon, color, label, value, sub, small,
+  icon: Icon, color, label, value, sub, small, onViewAll,
 }: {
   icon: typeof FileText; color: string; label: string; value: string | number; sub: string; small?: boolean;
+  onViewAll?: () => void;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-start gap-3">
+    <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-start gap-3 relative">
       <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
         <Icon size={16} />
       </div>
-      <div>
-        <p className="text-xs text-gray-500">{label}</p>
+      <div className="flex-1">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-500">{label}</p>
+          {onViewAll && (
+            <button onClick={onViewAll} className="text-primary text-xs font-medium shrink-0">
+              View All →
+            </button>
+          )}
+        </div>
         <p className={`font-bold text-gray-900 ${small ? "text-lg" : "text-xl"}`}>{value}</p>
         <p className="text-xs text-gray-400">{sub}</p>
       </div>

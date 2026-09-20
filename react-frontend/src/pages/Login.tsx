@@ -1,11 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { BookOpen, FileText, BarChart3, HelpCircle, Target, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import {
+  BookOpen, FileText, BarChart3, HelpCircle, Target, Mail, Lock, Eye, EyeOff,
+  Upload, Sparkles, LineChart, AlertCircle, X,
+} from "lucide-react";
 import axios from "axios";
 
 type Tab = "login" | "signup";
+
+const NAV_LINKS = [
+  { id: "features", label: "Features" },
+  { id: "subjects", label: "Subjects" },
+  { id: "how-it-works", label: "How It Works" },
+  { id: "about", label: "About" },
+];
 
 export default function Login() {
   const [tab, setTab] = useState<Tab>("login");
@@ -15,9 +25,17 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(false);
   const { login, signup } = useAuth();
   const navigate = useNavigate();
+
+  // Auto-dismiss the popup after a few seconds
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -28,40 +46,78 @@ export default function Login() {
       else await signup(email, password, name);
       navigate("/");
     } catch (err) {
-      const msg =
+      const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+      const detail =
         axios.isAxiosError(err) && err.response?.data?.detail
-          ? err.response.data.detail
-          : `${tab === "login" ? "Sign in" : "Sign up"} failed`;
+          ? String(err.response.data.detail)
+          : "";
+
+      let msg = detail || `${tab === "login" ? "Sign in" : "Sign up"} failed`;
+
+      // Normalize the message shown to the user for a wrong-password / bad-credentials case
+      if (tab === "login" && (status === 401 || status === 400)) {
+        msg = "Incorrect email or password. Please try again.";
+      }
+
       setError(msg);
+      setToast(msg);
     }
     setLoading(false);
   };
 
+  const scrollToSection = (id: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Wrong-password / login-failure popup */}
+      {toast && (
+        <div className="fixed top-5 right-5 z-50 animate-[fadeIn_0.2s_ease-out]">
+          <div className="flex items-start gap-3 bg-white border border-red-200 shadow-lg rounded-xl px-4 py-3 max-w-sm">
+            <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={20} />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-900">Sign in failed</p>
+              <p className="text-sm text-gray-600">{toast}</p>
+            </div>
+            <button
+              onClick={() => setToast("")}
+              className="text-gray-400 hover:text-gray-600 shrink-0"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top nav */}
-      <header className="flex items-center justify-between px-8 py-4 border-b border-gray-100 bg-white">
+      <header className="flex items-center justify-between px-8 py-4 border-b border-gray-100 bg-white sticky top-0 z-40">
         <div className="flex items-center gap-2">
           <BookOpen className="text-primary" size={22} />
           <span className="font-bold text-gray-900">AI QBank</span>
           <span className="text-gray-400 text-sm hidden sm:inline">Your Study Companion</span>
         </div>
         <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
-          <a href="#" className="hover:text-gray-900">Features</a>
-          <a href="#" className="hover:text-gray-900">Subjects</a>
-          <a href="#" className="hover:text-gray-900">How It Works</a>
-          <a href="#" className="hover:text-gray-900">About</a>
+          {NAV_LINKS.map(({ id, label }) => (
+            <a key={id} href={`#${id}`} onClick={scrollToSection(id)} className="hover:text-gray-900">
+              {label}
+            </a>
+          ))}
         </nav>
         <button
-          onClick={() => setTab("login")}
+          onClick={() => {
+            setTab("login");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
           className="bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-primaryDark transition"
         >
           Sign In
         </button>
       </header>
 
-      {/* Hero + auth card */}
-      <div className="max-w-6xl mx-auto px-8 py-16 grid md:grid-cols-2 gap-12 items-center">
+      {/* Hero + auth card — fills the first viewport (minus the header) */}
+      <div className="min-h-[calc(100vh-73px)] max-w-6xl mx-auto px-8 py-16 grid md:grid-cols-2 gap-12 items-center content-center">
         {/* Left: marketing content */}
         <div>
           <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-primary/10 text-primary px-3 py-1.5 rounded-full mb-4">
@@ -75,13 +131,6 @@ export default function Login() {
             Upload your study materials, analyze past year questions, and get AI-powered
             questions, insights, and personalized practice — all in one place.
           </p>
-
-          <div className="grid grid-cols-2 gap-4 max-w-md">
-            <Feature icon={FileText} color="bg-blue-50 text-blue-500" title="Upload & Analyze" desc="Syllabus, Notes, PYQs" />
-            <Feature icon={BarChart3} color="bg-green-50 text-green-500" title="Find Key Topics" desc="Based on historical patterns" />
-            <Feature icon={HelpCircle} color="bg-yellow-50 text-yellow-500" title="Generate Questions" desc="AI-powered, high-quality" />
-            <Feature icon={Target} color="bg-red-50 text-red-500" title="Practice & Improve" desc="Track progress and get insights" />
-          </div>
         </div>
 
         {/* Right: auth card */}
@@ -168,21 +217,6 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="flex items-center gap-3 my-6">
-            <div className="h-px bg-gray-200 flex-1" />
-            <span className="text-xs text-gray-400">or continue with</span>
-            <div className="h-px bg-gray-200 flex-1" />
-          </div>
-
-          <div className="space-y-3">
-            <button className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              <span>🔍</span> Continue with Google
-            </button>
-            <button className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              <span>🐙</span> Continue with GitHub
-            </button>
-          </div>
-
           <p className="text-center text-sm text-gray-500 mt-6">
             {tab === "login" ? (
               <>
@@ -202,6 +236,88 @@ export default function Login() {
           </p>
         </div>
       </div>
+
+      {/* Features section */}
+      <section id="features" className="scroll-mt-[73px] min-h-[calc(100vh-73px)] flex items-center border-t border-gray-100 bg-white">
+        <div className="max-w-6xl mx-auto px-8 py-16 w-full">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-3">
+            Everything you need to prepare smarter
+          </h2>
+          <p className="text-gray-500 text-center max-w-xl mx-auto mb-10">
+            From raw study material to a ranked, exam-ready question bank — AI QBank handles the
+            whole pipeline.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            <Feature icon={FileText} color="bg-blue-50 text-blue-500" title="Upload & Analyze" desc="Syllabus, Notes, PYQs" />
+            <Feature icon={BarChart3} color="bg-green-50 text-green-500" title="Find Key Topics" desc="Based on historical patterns" />
+            <Feature icon={HelpCircle} color="bg-yellow-50 text-yellow-500" title="Generate Questions" desc="AI-powered, high-quality" />
+            <Feature icon={Target} color="bg-red-50 text-red-500" title="Practice & Improve" desc="Track progress and get insights" />
+          </div>
+        </div>
+      </section>
+
+      {/* Subjects section */}
+      <section id="subjects" className="scroll-mt-[73px] min-h-[calc(100vh-73px)] flex items-center border-t border-gray-100 bg-white">
+        <div className="max-w-6xl mx-auto px-8 py-16 w-full">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-3">
+            Works for any subject
+          </h2>
+          <p className="text-gray-500 text-center max-w-xl mx-auto mb-10">
+            Whether it's engineering, science, or the humanities — upload your syllabus and past
+            papers, and AI QBank builds a question bank tailored to that subject.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {["Algorithms & CS", "Mathematics", "Physics & Chemistry", "Economics", "Biology", "Business Studies", "Law", "Any custom subject"].map((s) => (
+              <div key={s} className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-5 text-center">
+                <p className="text-sm font-medium text-gray-800">{s}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works section */}
+      <section id="how-it-works" className="scroll-mt-[73px] min-h-[calc(100vh-73px)] flex items-center bg-gray-50">
+        <div className="max-w-6xl mx-auto px-8 py-16 w-full">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-10">
+            How It Works
+          </h2>
+          <div className="grid md:grid-cols-4 gap-6">
+            <Step number={1} icon={Upload} title="Upload materials" desc="Add your syllabus, notes, and previous year question papers." />
+            <Step number={2} icon={LineChart} title="AI analyzes patterns" desc="We find recurring topics, weightage, and question trends." />
+            <Step number={3} icon={Sparkles} title="Generate questions" desc="Grounded, high-quality questions are created from your material." />
+            <Step number={4} icon={Target} title="Practice & improve" desc="Download question sets and track your prep as exam day nears." />
+          </div>
+        </div>
+      </section>
+
+      {/* About section */}
+      <section id="about" className="scroll-mt-[73px] min-h-[calc(100vh-73px)] flex items-center border-t border-gray-100 bg-white">
+        <div className="max-w-3xl mx-auto px-8 py-16 text-center w-full">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">About AI QBank</h2>
+          <p className="text-gray-500 leading-relaxed">
+            AI QBank was built to solve a simple problem: students spend hours guessing what to
+            study instead of studying it. By analyzing your syllabus alongside real past-year
+            question patterns, AI QBank surfaces exactly what tends to be asked — so your
+            preparation time goes where it matters most before an exam.
+          </p>
+          <button
+            onClick={() => {
+              setTab("login");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="mt-8 bg-primary text-white text-sm font-medium px-6 py-2.5 rounded-lg hover:bg-primaryDark transition"
+          >
+            Back to Sign In
+          </button>
+        </div>
+      </section>
+
+      <footer className="border-t border-gray-100 bg-white">
+        <div className="max-w-6xl mx-auto px-8 py-8 text-center text-sm text-gray-400">
+          © {new Date().getFullYear()} AI QBank — Your Study Companion
+        </div>
+      </footer>
     </div>
   );
 }
@@ -223,6 +339,31 @@ function Feature({
         <Icon size={18} />
       </div>
       <p className="text-sm font-semibold text-gray-900">{title}</p>
+      <p className="text-xs text-gray-500">{desc}</p>
+    </div>
+  );
+}
+
+function Step({
+  number,
+  icon: Icon,
+  title,
+  desc,
+}: {
+  number: number;
+  icon: typeof Upload;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-5 relative">
+      <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-3">
+        <Icon size={18} />
+      </div>
+      <span className="absolute top-4 right-4 text-xs font-semibold text-gray-300">
+        {String(number).padStart(2, "0")}
+      </span>
+      <p className="text-sm font-semibold text-gray-900 mb-1">{title}</p>
       <p className="text-xs text-gray-500">{desc}</p>
     </div>
   );

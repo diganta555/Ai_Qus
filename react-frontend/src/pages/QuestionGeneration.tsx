@@ -40,6 +40,7 @@ export default function QuestionGeneration() {
   const [genLoading, setGenLoading] = useState(false);
   const [stepStatus, setStepStatus] = useState<Record<string, boolean>>({});
   const [preview, setPreview] = useState<GeneratedQuestion[]>([]);
+  const [previewIsPrevious, setPreviewIsPrevious] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -51,16 +52,29 @@ export default function QuestionGeneration() {
       setPipelineStep(completedCount);
     });
     setPipelineError(null);
+
+    // Show whatever was already generated for this subject, if anything,
+    // instead of a blank page until the user clicks Generate again.
+    setGenResult(null);
+    setPreview([]);
+    api.finalQuestions(subjectId).then((r) => {
+      if (r.data.length > 0) {
+        setGenResult({ ok: true, final_top_n: r.data.length });
+        setPreview(r.data.slice(0, 3));
+        setPreviewIsPrevious(true);
+      }
+    }).catch(() => {});
   }, [subjectId]);
 
   if (!subjectId)
     return <p className="text-yellow-700">Select a subject in the sidebar first.</p>;
   const subjectName = subjects.find((s) => s.id === subjectId)?.name;
 
-      const runFullPipeline = async () => {
+  const runFullPipeline = async () => {
     setPipelineRunning(true);
     setPipelineError(null);
-
+    setStepStatus({});   // clear stale badges from any previous run before starting fresh
+    setPipelineStep(0);
     for (let i = 0; i < STEPS.length; i++) {
       const [label, endpoint] = STEPS[i];
       const stepKey = endpoint.replace("/", "").replace(/-/g, "_");
@@ -94,10 +108,11 @@ export default function QuestionGeneration() {
     api.knowledgeBaseStatus(subjectId).then((r) => setKbExists(r.data.exists));
   };
 
-    const generate = async () => {
+  const generate = async () => {
     setGenLoading(true);
     setGenResult(null);
     setPreview([]);
+    setPreviewIsPrevious(false);
     try {
       const { data } = await api.generateQuestions(subjectId, genParams);
       setGenResult({ ok: true, ...data });
@@ -158,7 +173,7 @@ export default function QuestionGeneration() {
           </button>
         </div>
 
-                {(pipelineRunning || pipelineStep > 0) && (
+        {(pipelineRunning || pipelineStep > 0) && (
           <div>
             <div className="w-full bg-gray-100 rounded-full h-2.5 mb-1">
               <div
@@ -232,21 +247,25 @@ export default function QuestionGeneration() {
         >
           {genLoading ? "Generating... this may take 1-2 minutes" : "⚡ Generate Final Questions"}
         </button>
-                {genResult && (
+        {genResult && (
           <div
             className={`mt-4 rounded-lg p-3 text-sm ${
               genResult.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
             }`}
           >
             {genResult.ok
-              ? `Generated ${genResult.total_generated} candidates → ${genResult.final_top_n} ranked questions.`
+              ? previewIsPrevious
+                ? `Showing your most recent generated set — ${genResult.final_top_n} questions.`
+                : `Generated ${genResult.total_generated} candidates → ${genResult.final_top_n} ranked questions.`
               : `Generation failed: ${genResult.msg}`}
           </div>
         )}
 
         {preview.length > 0 && (
           <div className="mt-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Preview</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+              {previewIsPrevious ? "Previously Generated — Preview" : "Preview"}
+            </h3>
             <div className="space-y-2">
               {preview.map((q, i) => (
                 <div key={q.id} className="border border-gray-200 rounded-lg p-3">

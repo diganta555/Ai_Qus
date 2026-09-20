@@ -30,6 +30,12 @@ client.interceptors.response.use(
   }
 );
 
+export interface QuestionBatch {
+  batch_id: string;
+  created_at: string;
+  question_count: number;
+}
+
 export const api = {
   login: (email: string, password: string) =>
     client.post<AuthResponse>("/auth/login", { email, password }),
@@ -83,13 +89,18 @@ export const api = {
     client.post<AskResponse>(`/subjects/${subjectId}/ask`, { question }),
 
   pipelineStatus: (subjectId: number) =>
-
     client.get<Record<string, boolean>>(`/subjects/${subjectId}/pipeline-status`),
 
   jobStatus: (subjectId: number, step: string) =>
-  client.get<{ status: string; error?: string }>(`/subjects/${subjectId}/job-status/${step}`),
+    client.get<{ status: string; error?: string }>(`/subjects/${subjectId}/job-status/${step}`),
 
-    
+  // --- Batches: every time "Generate Final Questions" runs, the backend
+  // stamps the new set with a batch_id. These let the UI list past sets
+  // (1, 2, 3, ...) and fetch any one of them.
+  listBatches: (subjectId: number) =>
+    client.get<QuestionBatch[]>(`/subjects/${subjectId}/batches`),
+  batchQuestions: (subjectId: number, batchId: string) =>
+    client.get<GeneratedQuestion[]>(`/subjects/${subjectId}/batches/${batchId}/questions`),
 };
 
 export default api;
