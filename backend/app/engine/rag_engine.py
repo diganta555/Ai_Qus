@@ -2,13 +2,13 @@ import os
 import pickle
 import numpy as np
 import faiss
-from sentence_transformers import SentenceTransformer
+from app.engine.embedding_model import get_embedding_model
 
 
 class RAGEngine:
     def __init__(self, vectorstore_dir: str = "./storage/vectorstore"):
         self.vectorstore_dir = vectorstore_dir
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.model = get_embedding_model()
         self.embedding_dim = 384
 
     def _subject_dir(self, subject_id: int) -> str:

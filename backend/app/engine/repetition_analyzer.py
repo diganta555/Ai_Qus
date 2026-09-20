@@ -1,10 +1,10 @@
-from sentence_transformers import SentenceTransformer
+from app.engine.embedding_model import get_embedding_model
 import numpy as np
 
 
 class RepetitionAnalyzer:
     def __init__(self, near_duplicate_threshold: float = 0.85):
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.model = get_embedding_model()
         self.threshold = near_duplicate_threshold
 
     def _normalize(self, text: str) -> str:

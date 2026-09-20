@@ -1,10 +1,10 @@
-from sentence_transformers import SentenceTransformer
+from app.engine.embedding_model import get_embedding_model
 import numpy as np
 
 
 class QuestionValidator:
     def __init__(self, duplicate_threshold: float = 0.88):
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.model = get_embedding_model()
         self.threshold = duplicate_threshold
 
     def check_duplicate(self, candidate_text: str, existing_texts: list[str]) -> tuple[bool, float]:
