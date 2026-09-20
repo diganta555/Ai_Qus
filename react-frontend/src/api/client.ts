@@ -82,8 +82,14 @@ export const api = {
   ask: (subjectId: number, question: string) =>
     client.post<AskResponse>(`/subjects/${subjectId}/ask`, { question }),
 
-    pipelineStatus: (subjectId: number) =>
+  pipelineStatus: (subjectId: number) =>
+
     client.get<Record<string, boolean>>(`/subjects/${subjectId}/pipeline-status`),
+
+  jobStatus: (subjectId: number, step: string) =>
+  client.get<{ status: string; error?: string }>(`/subjects/${subjectId}/job-status/${step}`),
+
+    
 };
 
 export default api;

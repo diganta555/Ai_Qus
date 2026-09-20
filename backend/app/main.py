@@ -7,9 +7,8 @@ if settings.hf_token:
     os.environ["HF_TOKEN"] = settings.hf_token
 
 from app.database.connection import Base, engine
-from app.models import subject, document, syllabus, question, concept, pattern, generated_question, user  # noqa
 from app.api import subjects, documents, analysis, auth
-
+from app.models import subject, document, syllabus, question, concept, pattern, generated_question, user, job  # noqa
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="AI Question Generation Engine")

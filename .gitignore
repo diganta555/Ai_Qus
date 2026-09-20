@@ -13,3 +13,4 @@ wheels/
 storage/uploads/*
 storage/vectorstore/*
 storage/*.db
+backend/storage/

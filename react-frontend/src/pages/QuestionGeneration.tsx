@@ -57,18 +57,33 @@ export default function QuestionGeneration() {
     return <p className="text-yellow-700">Select a subject in the sidebar first.</p>;
   const subjectName = subjects.find((s) => s.id === subjectId)?.name;
 
-    const runFullPipeline = async () => {
+      const runFullPipeline = async () => {
     setPipelineRunning(true);
     setPipelineError(null);
 
     for (let i = 0; i < STEPS.length; i++) {
       const [label, endpoint] = STEPS[i];
+      const stepKey = endpoint.replace("/", "").replace(/-/g, "_");
       try {
         await api.runStep(subjectId, endpoint);
+
+        // Poll until this step finishes (success or failed)
+        let finished = false;
+        while (!finished) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const { data } = await api.jobStatus(subjectId, stepKey);
+          if (data.status === "success") {
+            finished = true;
+          } else if (data.status === "failed") {
+            throw new Error(data.error || "Step failed");
+          }
+          // if "running" or "not_started", keep polling
+        }
+
         const status = await api.pipelineStatus(subjectId);
         setStepStatus(status.data);
         setPipelineStep(Object.values(status.data).filter(Boolean).length);
-      } catch {
+      } catch (e) {
         setPipelineError(`Failed at step: ${label}`);
         setPipelineRunning(false);
         return;
