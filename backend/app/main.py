@@ -12,7 +12,6 @@ from app.api import subjects, documents, analysis, auth
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="AI Question Generation Engine")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -20,6 +19,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "https://ai-qus.vercel.app",
         "https://ai-qus-omega.vercel.app",
+        "https://app.digachari.co.in",
     ],
     allow_credentials=True,
     allow_methods=["*"],
