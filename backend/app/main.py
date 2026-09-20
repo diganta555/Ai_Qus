@@ -12,6 +12,8 @@ from app.api import subjects, documents, analysis, auth
 
 Base.metadata.create_all(bind=engine)
 
+app = FastAPI(title="AI Question Generation Engine")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
